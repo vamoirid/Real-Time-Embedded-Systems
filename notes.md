@@ -11,7 +11,6 @@
 * _int_ **full**, **empty**: Δύο μεταβλητές (**boolean** λογικής) οι οποίες μας ενημερώνουν για το αν η λίστα είναι γεμάτη ή άδεια δηλαδή **full** ή **empty**. 
 * _pthread_mutex_t_ **\*mut**: Ένα **mutex**. **(\*\*\*ΑΠΟΡΙΑ\*\*\*: Γιατί pointer?)**
 * _pthread_cond_t_ **\*notFull**, **\*notEmpty**: Δύο μεταβλητές **cond**. **(\*\*\*ΑΠΟΡΙΑ\*\*\*: Γιατί pointer?)**
-* _sem_t_ **\*sem_t**: Ένα **semaphore**. **(\*\*\*ΑΠΟΡΙΑ\*\*\*: Γιατί pointer?)**
 
 Έτσι λοιπόν πλέον έχει ολοκληρωθεί η δομή της **queue** και περιέχει όλα τα στοιχεία τα οποία θα χρησιμοποιήσουμε. Η τελική δομή της λίστας φαίνεται παρακάτω:
 
@@ -47,17 +46,15 @@ queue queueInit(void)
     q->mut = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
     pthread_mutex_init(q->mut, NULL);
     q->notFull = (pthread_cond_t *)malloc(sizeof(pthread_cond_t));
-    pthread_cond_init(q->notFull, q->mut);
+    pthread_cond_init(q->notFull, NULL);
     q->notEmpty = (pthread_cond_t *)malloc(sizeof(pthread_cond_t));
-    pthread_cond_init(q->notEmpty, q->mut);
-    q->sem = (sem_t *)malloc(sizeof(sem_t));
-    sem_init(q->sem, 0, 0);
+    pthread_cond_init(q->notEmpty, NULL);
     
     return (q);
 }
 ```
 
-Η παραπάνω συνάρτηση λοιπόν αρχικοποιεί όλες τις τιμές της ουράς που θα χρησιμοποιήσουμε στη συνέχεια. Ο λόγος που βάζουμε 0 στο **value** της **sem_init**() θα γίνει κατανοητός αργότερα. 
+Η παραπάνω συνάρτηση λοιπόν αρχικοποιεί όλες τις τιμές της ουράς που θα χρησιμοποιήσουμε στη συνέχεια. 
 
 * #### queueAdd()
 
@@ -127,3 +124,160 @@ void queueDelete(queue *q)
 ```
 
 Η παραπάνω συνάρτηση λοιπόν που μοιάζει με την queueDel() αλλά **δεν πρέπει** σε καμία περίπτωση να μπερδευτεί, καταστρέφει πρώτα με τις συναρτήσεις των αντίστοιχων βιβλιοθηκων τα αντίστοιχα "αντικείμενα" που αρχικοποίησε και μετά ελευθερώνει τη μνήμη που είχε δεσμευτεί για τη δημιουργία τους. Τέλος αποδεσμεύεται και το αρχικό κομμάτι μνήμης που είχε δεσμευτεί για τη δημιουργία της ουράς.
+
+## Υλοποίηση Producer - Consumer
+
+Η λογική με την οποία πρέπει να υλοποιηθεί η εργασία είναι ότι **p** producers θα πρέπει να διαθέτουν δουλειές και **q** consumers να τις εκτελούν. Αυτό για να το καταφέρουμε θα το χτίσουμε βήμα-βήμα μέχρι το τέλος. Αρχικά αντί να αναθέτουν **δουλειές**, θα αναθέτουν **ακέραιους αριθμούς** για να μειωθεί η πολυπλοκότητα. 
+
+Η λογική τώρα της ανάθεσης και εκτέλεσης "δουλειών" από producers σε consumers πρέπει να ακολουθεί μερικά λογικά βήματα για να αποφευχθούν λογικά λάθη.  Αρχικά λοιπόν ο **producer** φτιάχνει έναν queue pointer για να μπορέσει να διαχειριστεί τα δεδομένα της queue που του δίνουμε.  Στη συνέχεια θέλουμε να βάλουμε ένα στοιχείο στην **queue** και μετά να τερματίσουμε το thread. Για να βάλουμε ένα στοιχείο στην **queue** πρέπει να διασφαλίσουμε ότι μόνο εμείς θα έχουμε access στην **queue** εκείνη τη στιγμή διότι αλλιώς αν ταυτόχρονα ένας βάζει και άλλος βγάζει θα δημιουργθούν απροσδιόριστες συμπεριφορές. Γι' αυτό το λόγο χρησιμοποιούμε το **mutex** για τη δουλειά αυτή. Τέλος αφού έχουμε ξεκλειδώσει το **mutex** πρέπει να ειδοποιήσουμε κάπως τον **consumer** ότι πλέον υπάρχει κάτι διαθέσιμο στην ουρά. Έτσι λοιπόν παίρνει τη σκυτάλη το _condition variable_ **notEmpty** και στέλνει ένα **signal**. Ο λόγος που χρησιμοποιείται η _pthread_cond_signal()_ και όχι η _pthread_cond_broadcast()_ είναι διότι η 2η θα στείλει σήμα σε **ΟΛΑ** τα threads που περιμένουν ενώ η 1η μόνο σε ένα. Έτσι εξασφαλίζουμε ότι δεν θα ξεκινήσουν ταυτόχρονα πάνω από 1 threads να εκτελούνε.
+
+```c
+void *producer(void *args)
+{
+    queue *info;
+    fifo = (queue *)args;
+    int value;
+    
+    pthread_mutex_lock(fifo->mut);
+    
+    while (fifo->full)
+	{
+		printf("producer: queue FULL.\n");
+		pthread_cond_wait(fifo->notFull, fifo->mut);
+	}
+    
+    queueAdd(fifo, value);
+    pthread_mutex_unlock(fifo->mut);
+    pthread_cond_signal(fifo->notEmpty);
+    
+    pthread_exit(0);
+}
+```
+
+Αφού πλέον τοποθετούμε πράγματα στην ουρά μέσω του **producer** πρέπει να φτιάξουμε και το thread του **consumer** ο οποίος δέχεται τα κομμάτια της ουράς. Όπως και πριν πρέπει να δημιουργήσουμε έναν pointer queue για να μπορέσουμε να πάρουμε τα δεδομένα της ουράς. Στη συνέχεια πρέπει να περιμένουμε μέχρι να υπάρχει κάτι διαθέσιμο στη λίστα πράγμα το οποίο μπορούμε να πετύχουμε όπως και πριν μέσω των **condition variables** και μάλιστα χρησιμοποιώντας τη συνάρτηση **pthread_cond_wait**(). Όσο δεν υπάρχει κάτι διαθέσιμο το thread παραμένει σε αυτό το σημείο του κώδικα χωρίς να κάνει τίποτα και προχωράει μόνο όταν η τιμή του _conditon variable_ **notEmpty** αλλάξει μέσω της **pthread_cond_signal**() από τον producer. Στη συνέχεια όπως και πριν πρέπει ο consumer να διαγράφει κομμάτια αποκλειστικά χωρίς να έχει ταυτόχρονα κάποιος άλλος πρόσβαση στην ουρά. Γι' αυτό το λόγο πάλι χρησιμοποιούμε **mutex**.
+
+```C
+void *consumer(void *args)
+{
+    queue *fifo;
+    fifo = (queue *)args;
+    int value;
+ 
+    pthread_mutex_lock(fifo->mut);
+    
+    while(fifo->empty)
+	{
+		printf("consumer: queue EMPTY.\n");
+		pthread_cond_wait(fifo->notEmpty, fifo->mut);
+	}
+    
+    queueDel(fifo, &value);
+    pthread_mutex_unlock(fifo->mut);
+    pthread_cond_signal(fifo->notFull);
+    
+    pthread_exit(0);
+}
+```
+
+Επίσης η διαδικασία επιλογής του αριθμού των producers-consumers και εργασιών για να αυξάνεται σταδιακά η πολυπλοκότητα θα έχει ως εξής:
+
+1. (producer, consumer, int) = (1, 1, 1)
+2. (producer, consumer, int) = (1, 1, n)
+3. (producer, consumer, int) = (1, q, n)
+4. (producer, consumer, int) = (p, q, n)
+
+#### (producer, consumer, int) = (1, 1, 1)
+
+---
+
+To συγκεκριμένο σύστημα είναι αυτό που περιγράψαμε πιο πάνω. 
+
+#### (producer, consumer, int) = (1, 1, n)
+
+---
+
+Το συγκεκριμένο σύστημα προυποθέτει ότι έχουμε μια στατική δομή ουράς στην οποία βάζουμε στοιχεία μέσω του producer, βγάζουμε στοιχεία μέσω του consumer αλλά ταυτόχρονα ελέγχουμε να μην γίνει overflow/underflow στην ουρά. Για να το πετύχουμε αυτό αρχικά θα πρέπει να φτιάξουμε 2 **while(1)** λούπες στα 2 threads με τα οποία θα βάζουμε και θα βγάζουμε στοιχεία από το σύστημα **συνέχεια**. Όταν η ουρά θα είναι γεμάτη δηλαδή θα ισχύει ότι **fifo->full == 1** θα πρέπει το thread να περιμένει μέχρι να αδειάσει μια θέση για να μπορέσει να την τοποθετήσει. Αντίστοιχα όταν η ουρά θα είναι άδεια δηλαδή θα ισχύει **fifo->empty == 1** θα περιμένει ο consumer να μπει ένα στοιχείο για να μπορέσει να ξεκινήσει ο consumer. 
+
+Ο κώδικας του **producer** γίνεται λοιπόν:
+
+```c
+void *producer(void *args)
+{
+	queue *fifo;
+	fifo = (queue *)args;
+	int i = 0;
+
+	while (1)
+	{
+		pthread_mutex_lock(fifo->mut);
+
+		while (fifo->full)
+		{
+			printf("producer: queue FULL.\n");
+			pthread_cond_wait(fifo->notFull, fifo->mut);
+		}
+
+		queueAdd(fifo, i);
+		i++;
+		pthread_mutex_unlock(fifo->mut);
+		printf("added i = %d\n", i);	
+		pthread_cond_signal(fifo->notEmpty);
+	}
+
+
+	pthread_exit(0);
+}
+```
+
+Και ο κώδικα του **consumer** γίνεται λοιπόν:
+
+```c
+void *consumer(void *args)
+{
+	queue *fifo;
+	fifo = (queue *)args;
+	int value;
+
+	while(1)
+	{
+		pthread_mutex_lock(fifo->mut);
+
+		while(fifo->empty)
+		{
+			printf("consumer: queue EMPTY.\n");
+			pthread_cond_wait(fifo->notEmpty, fifo->mut);
+		}
+		
+		queueDel(fifo, &value);
+		pthread_mutex_unlock(fifo->mut);
+		printf("deleted i = %d\n", value);	
+		pthread_cond_signal(fifo->notFull);
+	}
+
+	pthread_exit(0);
+}
+```
+
+#### (producer, consumer, int) = (1, q, n)
+
+---
+
+Το συγκεκριμένο σύστημα πλέον χειρίζεται από **q διαφορετικούς consumers** ή αλλιώς **q consumer threads**. Ο βέλτιστος αριθμός **q** θα προσδιοριστεί στη συνέχεια όταν χρειαστεί να μετρήσουμε το χρόνο που χρειάζεται από τη στιγμή που μια διεργασία φτάνει στη λίστα μέχρι τη στιγμή που φεύγει από αυτή.  Ουσιαστική διαφορά δεν υπάρχει στον κώδικα παρά μόνο στο σημείο όπου δημιουργούμε τα threads. Εκεί θα πρέπει να δημιουργήσουμε **q = NUM_CONS** threads.
+
+#### (producer, consumer, int) = (p, q, n)
+
+---
+
+Το τελικό σύστημα είναι αυτό που πλέον αποτελείται από **p producer threads** τα οποία αναθέτουν συνεχόμενα _αριθμούς_ σε **q consumer threads**. Έτσι λοιπόν έχουμε φτάσει στο σημείο που πλέον πρέπει με κάποιον τρόπο αυτοί οι _αριθμοί_ να γίνουν **συναρτήσεις**.
+
+## Work Functions
+
+Στο σημείο αυτό πρέπει να γίνει η πιο σημαντική προσθήκη στον κώδικα μας. Ως τώρα αυτό που συνέβαινε μεταξύ **producers - consumers** ήταν ότι οι producers τοποθετούσαν αριθμούς μέσα σε μια ουρά και οι consumers τους βγάζανε. Αυτό που πρέπει να γίνει τώρα είναι ότι πρέπει αντί για αριθμούς, η ουρά θα πρέπει να αποτελείται από στοιχεία τύπου:
+
+```c
+struct workFunction {
+  void * (*work)(void *);
+  void * arg;
+}
+```
+
