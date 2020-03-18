@@ -17,8 +17,8 @@
  * DEFINES                                                                     *
  *******************************************************************************
  */
-#define NUM_PROD 8
-#define NUM_CONS 8
+#define NUM_PROD 1
+#define NUM_CONS 1
 #define QUEUESIZE 10
 
 /*
@@ -27,10 +27,12 @@
  *******************************************************************************
  */
 
-typedef struct workFunction {
-	void (*work)(void);
+/*typedef struct workFunction {
+	void *(*work)(void *);
 	void *arg;
-} queue_t;
+} queue_t; */
+
+typedef void* (*queue_t)(void*);
 
 typedef struct {
 	queue_t buf[QUEUESIZE];
@@ -53,15 +55,15 @@ void *consumer(void *args);
  * Functions' prototypes                                                       
  *******************************************************************************
  */
-queue *queueInit();
-void queueAdd(queue *q, queue_t in);
-void queueDel(queue *q, queue_t *out);
-void queueDelete(queue *q);
-void testFunA(void);
-void testFunB(void);
-void testFunC(void);
+queue *queueInit ();
+void queueAdd    (queue *q, queue_t in);
+void queueDel    (queue *q, queue_t *out);
+void queueDelete (queue *q);
+void* testFunA   (void *);
+void* testFunB   (void *);
+void* testFunC   (void *);
 
-void (*func_ptr[3])(void) = {testFunA, testFunB, testFunC};
+queue_t funcArray[3] = {testFunA, testFunB, testFunC};
 
 /*
  ******************************************************************************
@@ -130,15 +132,15 @@ void *producer(void *args)
 			pthread_cond_wait(fifo->notFull, fifo->mut);
 		}
 
-		struct timeval tv;
+		/*struct timeval tv;
 		gettimeofday(&tv, NULL);
-		fifo->buf[i].arg = &(tv.tv_usec);
+		fifo->buf[i].arg = &(tv.tv_usec);*/
 
-		queueAdd(fifo, (*func_ptr[i])(void));
+		queueAdd(fifo, funcArray[i]);
 		i++;
 		if (i == 3) i = 0;
 		pthread_mutex_unlock(fifo->mut);
-		printf("added i = %d\n", i);	
+		//printf("added i = %d\n", i);	
 		pthread_cond_signal(fifo->notEmpty);
 	}
 
@@ -156,6 +158,7 @@ void *consumer(void *args)
 	queue *fifo;
 	fifo = (queue *)args;
 	queue_t function2run;
+	double *sum, *result;
 
 	while(1)
 	{
@@ -166,8 +169,10 @@ void *consumer(void *args)
 			printf("consumer: queue EMPTY.\n");
 			pthread_cond_wait(fifo->notEmpty, fifo->mut);
 		}
-		
+
 		queueDel(fifo, &function2run);
+		//result = (double *)function2run(sum);
+		function2run(sum);
 		pthread_mutex_unlock(fifo->mut);
 		//printf("deleted i = %d\n", value);	
 		pthread_cond_signal(fifo->notFull);
@@ -242,29 +247,32 @@ void queueDelete(queue *q)
 	free(q);
 }
 
-void testFunA(void)
+void* testFunA(void *sum)
 {
-	int i,sum = 0;
-	for(i = 0; i < 360; i++) sum += sin(i);
-	printf("testFunA(): Hello guys! Did you know that the sum of the sin() of the corners from 0 to 360 degrees is %d?\n",sum);
+	double i, tot_sum = 0;
+	for(i = 0; i < 360; i++) tot_sum += sin(i);
+	printf("testFunA(): Hello guys! Did you know that the sum of the sin() from 0 to 360 degrees is %f?\n",tot_sum);
+	sum = &tot_sum;
 
-	return;
+	return (sum);
 }
 
-void testFunB(void)
+void* testFunB(void *sum)
 {
-	int i,sum = 0;
-	for(i = 0; i < 360; i++) sum += cos(i);
-	printf("testFunB(): Hello guys! Did you know that the sum of the cos() of the corners from 0 to 360 degrees is %d?\n",sum);
+	double i, tot_sum = 0;	
+	for(i = 0; i < 360; i++) tot_sum += cos(i);
+	printf("testFunB(): Hello guys! Did you know that the sum of the cos() from 0 to 360 degrees is %f?\n",tot_sum);
+	sum = &tot_sum;
 
-	return;
+	return (sum);
 }
 
-void testFunC(void)
+void* testFunC(void *sum)
 {
-	int i,sum = 0;
-	for(i = 0; i < 360; i++) sum += tan(i);
-	printf("testFunC(): Hello guys! Did you know that the sum of the tan() of the corners from 0 to 360 degrees is %d?\n",sum);
+	double i, tot_sum = 0;
+	for(i = 0; i < 360; i++) tot_sum += tan(i);
+	printf("testFunC(): Hello guys! Did you know that the sum of the tan() from 0 to 360 degrees is %f?\n",tot_sum);
+	sum = &tot_sum;
 
-	return;
+	return (sum);
 }

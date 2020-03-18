@@ -276,8 +276,8 @@ void *consumer(void *args)
 
 ```c
 struct workFunction {
-  void * (*work)(void *);
-  void * arg;
+  void *(*work)(void *);
+  void *arg;
 }
 ```
 
