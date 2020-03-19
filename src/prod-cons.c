@@ -2,7 +2,7 @@
  *******************************************************************************
  * Author: Vasileios Amoiridis                                                 *
  * Filename: prod-cons.c                                                       *
- * Date: Mar 17 22:52                                                          *
+ * Date: Mar 19 04:27                                                          *
  *******************************************************************************
  */
 #include <stdio.h>
@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <math.h>
+#include <assert.h>
 #include <sys/time.h>
 
 /*
@@ -26,13 +27,14 @@
  * queue Node type                                                             *
  *******************************************************************************
  */
+//typedef void *(*work)(void *);
 
-/*typedef struct workFunction {
+typedef struct workFunction {
 	void *(*work)(void *);
 	void *arg;
-} queue_t; */
+} queue_t;
 
-typedef void* (*queue_t)(void*);
+//typedef void *(*queue_t)(void *);
 
 typedef struct {
 	queue_t buf[QUEUESIZE];
@@ -43,36 +45,41 @@ typedef struct {
 } queue;
 
 /*
- ******************************************************************************
- * Thread Functions' prototypes                                                
+ *******************************************************************************
+ * Thread Functions' prototypes                                                *
  *******************************************************************************
  */
 void *producer(void *args);
 void *consumer(void *args);
 
 /*
- ******************************************************************************
- * Functions' prototypes                                                       
+ *******************************************************************************
+ * Functions' prototypes                                                       *
  *******************************************************************************
  */
 queue *queueInit ();
 void queueAdd    (queue *q, queue_t in);
 void queueDel    (queue *q, queue_t *out);
 void queueDelete (queue *q);
-void* testFunA   (void *);
-void* testFunB   (void *);
-void* testFunC   (void *);
+void *testFunA   (void *);
+void *testFunB   (void *);
+void *testFunC   (void *);
 
-queue_t funcArray[3] = {testFunA, testFunB, testFunC};
+//queue_t funcArray[3] = {testFunA, testFunB, testFunA};
+queue_t funcArray[3];
 
 /*
- ******************************************************************************
- * main()                                                                      
+ *******************************************************************************
+ * main()                                                                      *
  *******************************************************************************
  */
 
 int main(int argc, char *argv[])
 {
+	funcArray[0].work = testFunA;
+	funcArray[1].work = testFunB;
+	funcArray[2].work = testFunC;
+
 	queue *fifo;
 	pthread_t prod, cons[NUM_CONS];
 	pthread_attr_t attr;
@@ -112,8 +119,8 @@ usec = tv.tv_usec;
 	return 0;
 }
 /*
- ******************************************************************************
- * Thread producer                                                             
+ *******************************************************************************
+ * Thread producer                                                             *
  *******************************************************************************
  */
 void *producer(void *args)
@@ -149,8 +156,8 @@ void *producer(void *args)
 }
 
 /*
- ******************************************************************************
- * Thread consumer                                                             
+ *******************************************************************************
+ * Thread consumer                                                             *
  *******************************************************************************
  */
 void *consumer(void *args)
@@ -172,7 +179,7 @@ void *consumer(void *args)
 
 		queueDel(fifo, &function2run);
 		//result = (double *)function2run(sum);
-		function2run(sum);
+		function2run.work(sum);
 		pthread_mutex_unlock(fifo->mut);
 		//printf("deleted i = %d\n", value);	
 		pthread_cond_signal(fifo->notFull);
