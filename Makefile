@@ -5,7 +5,8 @@ SHELL := /bin/bash
 # ------------------------------------------------------------------------------
 CC = gcc
 RM = rm -f
-CFLAGS = -lpthread -lm
+CFLAGS = -Wall -Og
+CLINKS = -lm -lpthread
 
 # ------------------------------------------------------------------------------
 # DIRECTORIES
@@ -21,11 +22,10 @@ all: prod-cons
 
 # final link for executable
 prod-cons: prod-cons.o
-	$(CC) $^ -o $(BIN)/$@ $(CFLAGS)
-
+	$(CC) $(CFLAGS) $^ -o $(BIN)/$@ $(CLINKS)
 # generate objects
 %.o: $(SRC)/%.c
-	$(CC) -c $<
+	$(CC) -c $< 
 
 # clean temporary files
 clean:

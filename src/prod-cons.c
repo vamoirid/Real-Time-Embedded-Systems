@@ -2,7 +2,7 @@
  *******************************************************************************
  * Author: Vasileios Amoiridis                                                 *
  * Filename: prod-cons.c                                                       *
- * Date: Mar 19 04:27                                                          *
+ * Date: Mar 20 04:52                                                          *
  *******************************************************************************
  */
 #include <stdio.h>
@@ -10,7 +10,6 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <math.h>
-#include <assert.h>
 #include <sys/time.h>
 
 /*
@@ -18,26 +17,24 @@
  * DEFINES                                                                     *
  *******************************************************************************
  */
-#define NUM_PROD 1
-#define NUM_CONS 1
+#define NUM_PROD 4
+#define NUM_CONS 8
 #define QUEUESIZE 10
+#define LOOP 10
 
 /*
  *******************************************************************************
  * queue Node type                                                             *
  *******************************************************************************
  */
-//typedef void *(*work)(void *);
 
 typedef struct workFunction {
 	void *(*work)(void *);
 	void *arg;
-} queue_t;
-
-//typedef void *(*queue_t)(void *);
+} workFunction;
 
 typedef struct {
-	queue_t buf[QUEUESIZE];
+	workFunction buf[QUEUESIZE];
 	long head, tail;
 	int full, empty;
 	pthread_mutex_t *mut;
@@ -58,15 +55,21 @@ void *consumer(void *args);
  *******************************************************************************
  */
 queue *queueInit ();
-void queueAdd    (queue *q, queue_t in);
-void queueDel    (queue *q, queue_t *out);
+void queueAdd    (queue *q, workFunction in);
+void queueDel    (queue *q, workFunction *out);
 void queueDelete (queue *q);
-void *testFunA   (void *);
-void *testFunB   (void *);
-void *testFunC   (void *);
+void *testFunction0   (void *);
+void *testFunction1   (void *);
+void *testFunction2   (void *);
+void *testFunction3   (void *);
+void *testFunction4   (void *);
+void *testFunction5   (void *);
+void *testFunction6   (void *);
+void *testFunction7   (void *);
+void *testFunction8   (void *);
+void *testFunction9   (void *);
 
-//queue_t funcArray[3] = {testFunA, testFunB, testFunA};
-queue_t funcArray[3];
+workFunction funcArray[10];
 
 /*
  *******************************************************************************
@@ -76,13 +79,20 @@ queue_t funcArray[3];
 
 int main(int argc, char *argv[])
 {
-	funcArray[0].work = testFunA;
-	funcArray[1].work = testFunB;
-	funcArray[2].work = testFunC;
-
+	//funcArray = (workFunction *) malloc(10 * sizeof(workFunction));
+	funcArray[0].work = testFunction0;
+	funcArray[1].work = testFunction1;
+	funcArray[2].work = testFunction2;
+	funcArray[3].work = testFunction3;
+	funcArray[4].work = testFunction4;
+	funcArray[5].work = testFunction5;
+	funcArray[6].work = testFunction6;
+	funcArray[7].work = testFunction7;
+	funcArray[8].work = testFunction8;
+	funcArray[9].work = testFunction9;
+	
 	queue *fifo;
-	pthread_t prod, cons[NUM_CONS];
-	pthread_attr_t attr;
+	pthread_t prod[NUM_PROD], cons[NUM_CONS];
 	long* status;
 	int i;
 
@@ -96,25 +106,14 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	pthread_attr_init(&attr);
-	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
-
-gettimeofday(&tv, NULL);
-usec = tv.tv_usec;
-
 	for(i = 0; i < NUM_PROD; i++)
-		pthread_create(&prod, &attr, producer, fifo);
+		pthread_create(&prod[i], NULL, producer, fifo);
 	for (i = 0; i < NUM_CONS; i++)
-		pthread_create(&cons[i], &attr, consumer, fifo);
+		pthread_create(&cons[i], NULL, consumer, fifo);
 	for(i = 0; i < NUM_PROD; i++)
-		pthread_join(prod, NULL);
+		pthread_join(prod[i], NULL);
 	for (i = 0; i < NUM_CONS; i++)
 		pthread_join(cons[i], NULL);
-
-	/*printf("main(): producer thread exited with %ld status.\n", status);
-	printf("main(): consumer thread exited with %ld status.\n", status);*/
-
-	pthread_attr_destroy(&attr);
 
 	return 0;
 }
@@ -128,30 +127,26 @@ void *producer(void *args)
 	queue *fifo;
 	fifo = (queue *)args;
 	int i = 0;
+	long long address = (long long)&i;
+	srand(address);
 
-	while (1)
+	for(i = 0; i < LOOP; i++)
+	//while (1)
 	{
 		pthread_mutex_lock(fifo->mut);
 
 		while (fifo->full)
 		{
-			printf("producer: queue FULL.\n");
+			//printf("producer: queue FULL.\n");
 			pthread_cond_wait(fifo->notFull, fifo->mut);
 		}
 
-		/*struct timeval tv;
-		gettimeofday(&tv, NULL);
-		fifo->buf[i].arg = &(tv.tv_usec);*/
-
-		queueAdd(fifo, funcArray[i]);
-		i++;
-		if (i == 3) i = 0;
+		int r = rand() % 10; //random int between [0,9]
+		printf("%d\n", r);
+		queueAdd(fifo, funcArray[r]);
 		pthread_mutex_unlock(fifo->mut);
-		//printf("added i = %d\n", i);	
 		pthread_cond_signal(fifo->notEmpty);
 	}
-
-
 	pthread_exit(0);
 }
 
@@ -164,27 +159,25 @@ void *consumer(void *args)
 {
 	queue *fifo;
 	fifo = (queue *)args;
-	queue_t function2run;
-	double *sum, *result;
+	workFunction receivedWorkFunc;
+	double *sum;
 
 	while(1)
 	{
 		pthread_mutex_lock(fifo->mut);
 
-		while(fifo->empty)
+		while (fifo->empty)
 		{
-			printf("consumer: queue EMPTY.\n");
+			//printf("consumer: queue EMPTY.\n");
 			pthread_cond_wait(fifo->notEmpty, fifo->mut);
 		}
 
-		queueDel(fifo, &function2run);
-		//result = (double *)function2run(sum);
-		function2run.work(sum);
+		queueDel(fifo, &receivedWorkFunc);
 		pthread_mutex_unlock(fifo->mut);
-		//printf("deleted i = %d\n", value);	
 		pthread_cond_signal(fifo->notFull);
-	}
 
+		receivedWorkFunc.work(sum); //execute after signal!!!
+	}
 	pthread_exit(0);
 }
 
@@ -214,7 +207,7 @@ queue *queueInit()
 	return (q);
 }
 
-void queueAdd(queue *q, queue_t in)
+void queueAdd(queue *q, workFunction in)
 {
 	q->buf[q->tail] = in;
 	q->tail++;
@@ -228,7 +221,7 @@ void queueAdd(queue *q, queue_t in)
 	return;
 }
 
-void queueDel(queue *q, queue_t *out)
+void queueDel(queue *q, workFunction *out)
 {
 	*out = q->buf[q->head];
 	q->head++;
@@ -254,32 +247,103 @@ void queueDelete(queue *q)
 	free(q);
 }
 
-void* testFunA(void *sum)
-{
-	double i, tot_sum = 0;
-	for(i = 0; i < 360; i++) tot_sum += sin(i);
-	printf("testFunA(): Hello guys! Did you know that the sum of the sin() from 0 to 360 degrees is %f?\n",tot_sum);
-	sum = &tot_sum;
-
-	return (sum);
-}
-
-void* testFunB(void *sum)
+void* testFunction0(void *sum)
 {
 	double i, tot_sum = 0;	
+	for(i = 0; i < 360; i++) tot_sum += sin(i);
+	sum = &tot_sum;
+	printf("testFunction0\n");
+
+	return (sum);
+}
+
+void* testFunction1(void *sum)
+{
+	double i, tot_sum = 0;
 	for(i = 0; i < 360; i++) tot_sum += cos(i);
-	printf("testFunB(): Hello guys! Did you know that the sum of the cos() from 0 to 360 degrees is %f?\n",tot_sum);
+	sum = &tot_sum;
+	printf("testFunction1\n");
+
+	return (sum);
+}
+
+void* testFunction2(void *sum)
+{
+	double i, tot_sum = 0;	
+	for(i = 0; i < 360; i++) tot_sum += tan(i);
+	sum = &tot_sum;
+	printf("testFunction2\n");
+
+	return (sum);
+}
+
+void* testFunction3(void *sum)
+{
+	double i, tot_sum = 0;
+	for(i = 0; i < 360; i++) tot_sum += sin(i)*cos(i);
+	sum = &tot_sum;
+	printf("testFunction3\n");
+
+	return (sum);
+}
+
+void* testFunction4(void *sum)
+{
+	double i, tot_sum = 0;
+	for(i = 0; i < 360; i++) tot_sum += sin(i)*tan(i);
+	sum = &tot_sum;
+	printf("testFunction4\n");
+
+	return (sum);
+}
+
+void* testFunction5(void *sum)
+{
+	double i, tot_sum = 0;	
+	for(i = 0; i < 360; i++) tot_sum += cos(i)*tan(i);
 	sum = &tot_sum;
 
 	return (sum);
 }
 
-void* testFunC(void *sum)
+void* testFunction6(void *sum)
 {
 	double i, tot_sum = 0;
-	for(i = 0; i < 360; i++) tot_sum += tan(i);
-	printf("testFunC(): Hello guys! Did you know that the sum of the tan() from 0 to 360 degrees is %f?\n",tot_sum);
+	for(i = 0; i < 360; i++) tot_sum += sin(i)*sin(i);
 	sum = &tot_sum;
+	printf("testFunction6\n");
+
+
+	return (sum);
+}
+
+void* testFunction7(void *sum)
+{
+	double i, tot_sum = 0;
+	for(i = 0; i < 360; i++) tot_sum += cos(i)*cos(i);
+	sum = &tot_sum;
+	printf("testFunction7\n");
+
+
+	return (sum);
+}
+
+void* testFunction8(void *sum)
+{
+	double i, tot_sum = 0;	
+	for(i = 0; i < 360; i++) tot_sum += tan(i)*tan(i);
+	sum = &tot_sum;
+	printf("testFunction8\n");
+
+	return (sum);
+}
+
+void* testFunction9(void *sum)
+{
+	double i, tot_sum = 0;
+	for(i = 0; i < 360; i++) tot_sum += sin(i)*cos(i)*tan(i);
+	sum = &tot_sum;
+	printf("testFunction9\n");
 
 	return (sum);
 }
