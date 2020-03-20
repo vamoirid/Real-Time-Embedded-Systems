@@ -5,7 +5,7 @@ SHELL := /bin/bash
 # ------------------------------------------------------------------------------
 CC = gcc
 RM = rm -f
-CFLAGS = -Wall -Og
+CFLAGS = -Werror -Og
 CLINKS = -lm -lpthread
 
 # ------------------------------------------------------------------------------
@@ -17,11 +17,12 @@ BIN = bin
 # ------------------------------------------------------------------------------
 # TARGETS
 # ------------------------------------------------------------------------------
+EXECUTABLE = prod-cons
 
-all: prod-cons
+all: $(EXECUTABLE)
 
 # final link for executable
-prod-cons: prod-cons.o
+prod-cons: prod-cons.o queue.o functionDataBase.o
 	$(CC) $(CFLAGS) $^ -o $(BIN)/$@ $(CLINKS)
 # generate objects
 %.o: $(SRC)/%.c
@@ -33,4 +34,4 @@ clean:
 
 # remove executable
 purge: clean
-	$(RM) $(BIN)/prod-cons
+	$(RM) $(BIN)/$(EXECUTABLE)
