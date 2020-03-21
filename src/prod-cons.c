@@ -2,7 +2,7 @@
  *******************************************************************************
  * Author: Vasileios Amoiridis                                                 *
  * Filename: prod-cons.c                                                       *
- * Date: Mar 20 04:52                                                          *
+ * Date: Mar 21 04:00                                                          *
  *******************************************************************************
  */
 #include <stdio.h>
@@ -30,8 +30,14 @@
  */
 void *producer(void *args);
 void *consumer(void *args);
+workFunction* funcArrayInit();
 
-workFunction funcArray[10];
+/*
+ *******************************************************************************
+ * Global Variables                                                            *
+ *******************************************************************************
+ */
+workFunction *funcArray;
 
 /*
  *******************************************************************************
@@ -40,22 +46,13 @@ workFunction funcArray[10];
  */
 int main(int argc, char *argv[])
 {
-	//funcArray = (workFunction *) malloc(10 * sizeof(workFunction));
-	funcArray[0].work = testFunction0;
-	funcArray[1].work = testFunction1;
-	funcArray[2].work = testFunction2;
-	funcArray[3].work = testFunction3;
-	funcArray[4].work = testFunction4;
-	funcArray[5].work = testFunction5;
-	funcArray[6].work = testFunction6;
-	funcArray[7].work = testFunction7;
-	funcArray[8].work = testFunction8;
-	funcArray[9].work = testFunction9;
 	
 	queue *fifo;
 	pthread_t prod[NUM_PROD], cons[NUM_CONS];
 	long* status;
 	int i;
+
+	funcArray = funcArrayInit();
 
 	struct timeval tv;
 	suseconds_t usec;	
@@ -90,7 +87,7 @@ void *producer(void *args)
 	fifo = (queue *)args;
 	int i = 0;
 	long long address = (long long)&i;
-	srand(address);
+	srand(time(NULL));
 
 	for(i = 0; i < LOOP; i++)
 	//while (1)
@@ -103,8 +100,11 @@ void *producer(void *args)
 			pthread_cond_wait(fifo->notFull, fifo->mut);
 		}
 
-		int r = rand() % 10; //random int between [0,9]
-		printf("%d\n", r);
+		int r = rand() % 3; //random int between [0,9]
+		double *random_corner = (double *)malloc(sizeof(double));
+		*random_corner = rand() % 360;
+
+		funcArray[r].args = random_corner;
 		queueAdd(fifo, funcArray[r]);
 		pthread_mutex_unlock(fifo->mut);
 		pthread_cond_signal(fifo->notEmpty);
@@ -122,7 +122,7 @@ void *consumer(void *args)
 	queue *fifo;
 	fifo = (queue *)args;
 	workFunction receivedWorkFunc;
-	double *sum;
+	double *retVal;
 
 	while(1)
 	{
@@ -138,7 +138,26 @@ void *consumer(void *args)
 		pthread_mutex_unlock(fifo->mut);
 		pthread_cond_signal(fifo->notFull);
 
-		receivedWorkFunc.work(sum); //execute after signal!!!
+		retVal = receivedWorkFunc.work(receivedWorkFunc.args); //execute after signal!!!
+		free(retVal);
 	}
 	pthread_exit(0);
+}
+
+workFunction* funcArrayInit()
+{
+	funcArray = (workFunction *) malloc(10 * sizeof(workFunction));
+
+	funcArray[0].work = testFunction0;
+	funcArray[1].work = testFunction1;
+	funcArray[2].work = testFunction2;
+	funcArray[3].work = testFunction3;
+	funcArray[4].work = testFunction4;
+	funcArray[5].work = testFunction5;
+	funcArray[6].work = testFunction6;
+	funcArray[7].work = testFunction7;
+	funcArray[8].work = testFunction8;
+	funcArray[9].work = testFunction9;
+
+	return funcArray;
 }

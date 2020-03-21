@@ -8,6 +8,8 @@
 #ifndef FUNCTION_DATA_BASE_H
 #define FUNCTION_DATA_BASE_H
 
+#define PI 3.14159
+
 /*
  *******************************************************************************
  * Functions' prototypes                                                       *

@@ -17,7 +17,7 @@
  */
 typedef struct workFunction {
 	void *(*work)(void *);
-	void *arg;
+	void *args;
 } workFunction;
 
 /*
