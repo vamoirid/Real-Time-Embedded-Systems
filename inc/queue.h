@@ -12,12 +12,23 @@
 
 /*
  *******************************************************************************
+ * queue Node arguments' type                                                  *
+ *******************************************************************************
+ */
+typedef struct workFunArgs {
+	void *args;
+	struct timeval tv;
+} workFunArgs;
+
+/*
+ *******************************************************************************
  * queue Node type                                                             *
  *******************************************************************************
  */
 typedef struct workFunction {
 	void *(*work)(void *);
-	void *args;
+	//void *args;
+	workFunArgs timeNargs;
 } workFunction;
 
 /*

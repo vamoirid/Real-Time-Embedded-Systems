@@ -30,7 +30,7 @@ prod-cons: prod-cons.o queue.o functionDataBase.o
 
 # clean temporary files
 clean:
-	$(RM) *.o *~
+	$(RM) *.o *~ 
 
 # remove executable
 purge: clean

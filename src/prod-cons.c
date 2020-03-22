@@ -2,7 +2,7 @@
  *******************************************************************************
  * Author: Vasileios Amoiridis                                                 *
  * Filename: prod-cons.c                                                       *
- * Date: Mar 21 04:00                                                          *
+ * Date: Mar 22 04:46                                                          *
  *******************************************************************************
  */
 #include <stdio.h>
@@ -19,9 +19,9 @@
  * DEFINES                                                                     *
  *******************************************************************************
  */
-#define NUM_PROD 4
+#define NUM_PROD 8
 #define NUM_CONS 8
-#define LOOP 10
+#define LOOP 100
 
 /*
  *******************************************************************************
@@ -30,7 +30,9 @@
  */
 void *producer(void *args);
 void *consumer(void *args);
-workFunction* funcArrayInit();
+workFunction *funcArrayInit();
+void funcArrayDelete(workFunction *);
+
 
 /*
  *******************************************************************************
@@ -38,6 +40,7 @@ workFunction* funcArrayInit();
  *******************************************************************************
  */
 workFunction *funcArray;
+int producersFinished = 0;
 
 /*
  *******************************************************************************
@@ -54,9 +57,6 @@ int main(int argc, char *argv[])
 
 	funcArray = funcArrayInit();
 
-	struct timeval tv;
-	suseconds_t usec;	
-
 	fifo = queueInit();
 	if (fifo == NULL)
 	{
@@ -68,10 +68,20 @@ int main(int argc, char *argv[])
 		pthread_create(&prod[i], NULL, producer, fifo);
 	for (i = 0; i < NUM_CONS; i++)
 		pthread_create(&cons[i], NULL, consumer, fifo);
-	for(i = 0; i < NUM_PROD; i++)
+	for(i = 0; i < NUM_PROD; i++)	
 		pthread_join(prod[i], NULL);
+
+	producersFinished = 1;
+
+	pthread_mutex_lock(fifo->mut);
+	pthread_cond_broadcast(fifo->notEmpty);
+	pthread_mutex_unlock(fifo->mut);
+
 	for (i = 0; i < NUM_CONS; i++)
 		pthread_join(cons[i], NULL);
+
+	queueDelete(fifo);
+	funcArrayDelete(funcArray);
 
 	return 0;
 }
@@ -86,11 +96,10 @@ void *producer(void *args)
 	queue *fifo;
 	fifo = (queue *)args;
 	int i = 0;
-	long long address = (long long)&i;
+
 	srand(time(NULL));
 
 	for(i = 0; i < LOOP; i++)
-	//while (1)
 	{
 		pthread_mutex_lock(fifo->mut);
 
@@ -103,11 +112,16 @@ void *producer(void *args)
 		int r = rand() % 3; //random int between [0,9]
 		double *random_corner = (double *)malloc(sizeof(double));
 		*random_corner = rand() % 360;
+		funcArray[r].timeNargs.args = &random_corner;
 
-		funcArray[r].args = random_corner;
+		gettimeofday(&funcArray[r].timeNargs.tv, NULL);
+		suseconds_t usec = funcArray[r].timeNargs.tv.tv_usec;
+		
 		queueAdd(fifo, funcArray[r]);
 		pthread_mutex_unlock(fifo->mut);
 		pthread_cond_signal(fifo->notEmpty);
+
+		free(random_corner);
 	}
 	pthread_exit(0);
 }
@@ -123,24 +137,37 @@ void *consumer(void *args)
 	fifo = (queue *)args;
 	workFunction receivedWorkFunc;
 	double *retVal;
+	struct timeval time_arrived;
 
 	while(1)
 	{
+		if (fifo->empty && producersFinished) pthread_exit(0);
+
 		pthread_mutex_lock(fifo->mut);
 
 		while (fifo->empty)
 		{
 			//printf("consumer: queue EMPTY.\n");
 			pthread_cond_wait(fifo->notEmpty, fifo->mut);
+			if (producersFinished)
+			{
+				pthread_mutex_unlock(fifo->mut);
+				pthread_exit(0);
+			} 
 		}
 
 		queueDel(fifo, &receivedWorkFunc);
+
+		gettimeofday(&time_arrived, NULL);
+		//printf("Time needed = %ld\n", time_arrived.tv_usec - receivedWorkFunc.timeNargs.tv.tv_usec);
 		pthread_mutex_unlock(fifo->mut);
 		pthread_cond_signal(fifo->notFull);
 
-		retVal = receivedWorkFunc.work(receivedWorkFunc.args); //execute after signal!!!
+		retVal = receivedWorkFunc.work(receivedWorkFunc.timeNargs.args);
+
 		free(retVal);
 	}
+
 	pthread_exit(0);
 }
 
@@ -160,4 +187,9 @@ workFunction* funcArrayInit()
 	funcArray[9].work = testFunction9;
 
 	return funcArray;
+}
+
+void funcArrayDelete(workFunction *funcArray)
+{
+	free(funcArray);
 }

@@ -2,7 +2,7 @@
  *******************************************************************************
  * Author: Vasileios Amoiridis                                                 *
  * Filename: functionDataBase.c                                                *
- * Date: Mar 20 18:15                                                          *
+ * Date: Mar 21 04:00                                                          *
  *******************************************************************************
  */
 #include <stdio.h>
@@ -12,45 +12,47 @@
 
 void* testFunction0(void *args)
 {
-	double i, tot_sum = 0, *sum;
+	double i, *sum, *value;
+	value = (double *)args;
 
 	sum = (double *)malloc(sizeof(double));
 	if(!sum) return NULL;
 
-	*sum = sin(*(double *)args * PI / 180);
-	////for(i = 0; i < 360; i++) tot_sum += sin(i);
+	*sum = sin(*value * PI / 180);
+	for (i = 0; i < 60000000; i++);
+
 	//sum = &tot_sum; LATHOS!!!!!!!!!!!!
-	printf("0. sin(%.0f) = %.3f\n",*(double *)args, *(double *)sum);
+	//printf("0. sin(%.0f) = %.3f\n",*(double *)args, *(double *)sum);
 
 	return (sum);
 }
 
 void* testFunction1(void *args)
 {
-	double i, tot_sum = 0, *sum;
+	double i, *sum;
 
 	sum = (double *)malloc(sizeof(double));
 	if(!sum) return NULL;
 
 	*sum = cos(*(double *)args * PI / 180);
-	////for(i = 0; i < 360; i++) tot_sum += cos(i);
+
 	//sum = &tot_sum;
-	printf("1. cos(%.0f) = %.3f\n",*(double *)args, *(double *)sum);
+	//printf("1. cos(%.0f) = %.3f\n",*(double *)args, *(double *)sum);
 
 	return (sum);
 }
 
 void* testFunction2(void *args)
 {
-	double i, tot_sum = 0, *sum;
+	double i, *sum;
 
 	sum = (double *)malloc(sizeof(double));
 	if(!sum) return NULL;
 
 	*sum = tan(*(double *)args * PI / 180);
-	////for(i = 0; i < 360; i++) tot_sum += tan(i);
+
 	//sum = &tot_sum;
-	printf("2. tan(%.0f) = %.3f\n",*(double *)args, *(double *)sum);
+	//printf("2. tan(%.0f) = %.3f\n",*(double *)args, *(double *)sum);
 
 	return (sum);
 }
