@@ -2,7 +2,7 @@
  *******************************************************************************
  * Author: Vasileios Amoiridis                                                 *
  * Filename: prod-cons.c                                                       *
- * Date: Mar 22 04:46                                                          *
+ * Date: Mar 23 02:25                                                          *
  *******************************************************************************
  */
 #include <stdio.h>
@@ -21,7 +21,7 @@
  */
 #define NUM_PROD 8
 #define NUM_CONS 8
-#define LOOP 100
+#define LOOP 100000
 
 /*
  *******************************************************************************
@@ -52,7 +52,6 @@ int main(int argc, char *argv[])
 	
 	queue *fifo;
 	pthread_t prod[NUM_PROD], cons[NUM_CONS];
-	long* status;
 	int i;
 
 	funcArray = funcArrayInit();
@@ -72,9 +71,8 @@ int main(int argc, char *argv[])
 		pthread_join(prod[i], NULL);
 
 	producersFinished = 1;
-
 	pthread_mutex_lock(fifo->mut);
-	pthread_cond_broadcast(fifo->notEmpty);
+	pthread_cond_signal(fifo->notEmpty);
 	pthread_mutex_unlock(fifo->mut);
 
 	for (i = 0; i < NUM_CONS; i++)
@@ -95,9 +93,10 @@ void *producer(void *args)
 {
 	queue *fifo;
 	fifo = (queue *)args;
-	int i = 0;
-
-	srand(time(NULL));
+	int i, r;
+	double *random_corner;
+	long long address = (long long)&i;
+	srand(address);
 
 	for(i = 0; i < LOOP; i++)
 	{
@@ -109,20 +108,19 @@ void *producer(void *args)
 			pthread_cond_wait(fifo->notFull, fifo->mut);
 		}
 
-		int r = rand() % 3; //random int between [0,9]
-		double *random_corner = (double *)malloc(sizeof(double));
+		r = rand() % 4; //random int between [0,3]
+		random_corner = (double *)malloc(sizeof(double));
 		*random_corner = rand() % 360;
-		funcArray[r].timeNargs.args = &random_corner;
+		funcArray[r].timeNargs.args = random_corner;
 
 		gettimeofday(&funcArray[r].timeNargs.tv, NULL);
 		suseconds_t usec = funcArray[r].timeNargs.tv.tv_usec;
-		
+
 		queueAdd(fifo, funcArray[r]);
 		pthread_mutex_unlock(fifo->mut);
 		pthread_cond_signal(fifo->notEmpty);
-
-		free(random_corner);
 	}
+	
 	pthread_exit(0);
 }
 
@@ -157,14 +155,14 @@ void *consumer(void *args)
 		}
 
 		queueDel(fifo, &receivedWorkFunc);
-
 		gettimeofday(&time_arrived, NULL);
-		//printf("Time needed = %ld\n", time_arrived.tv_usec - receivedWorkFunc.timeNargs.tv.tv_usec);
+
 		pthread_mutex_unlock(fifo->mut);
 		pthread_cond_signal(fifo->notFull);
+		printf("Time needed = %ld\n", time_arrived.tv_usec - receivedWorkFunc.timeNargs.tv.tv_usec);
 
 		retVal = receivedWorkFunc.work(receivedWorkFunc.timeNargs.args);
-
+		//printf("retVal = %f\n", *retVal);
 		free(retVal);
 	}
 
@@ -173,18 +171,16 @@ void *consumer(void *args)
 
 workFunction* funcArrayInit()
 {
-	funcArray = (workFunction *) malloc(10 * sizeof(workFunction));
+	funcArray = (workFunction *) malloc(4 * sizeof(workFunction));
 
 	funcArray[0].work = testFunction0;
+	//funcArray[0].timeNargs.args = NULL;
 	funcArray[1].work = testFunction1;
+	//funcArray[1].timeNargs.args = NULL;
 	funcArray[2].work = testFunction2;
+	//funcArray[2].timeNargs.args = NULL;
 	funcArray[3].work = testFunction3;
-	funcArray[4].work = testFunction4;
-	funcArray[5].work = testFunction5;
-	funcArray[6].work = testFunction6;
-	funcArray[7].work = testFunction7;
-	funcArray[8].work = testFunction8;
-	funcArray[9].work = testFunction9;
+	//funcArray[3].timeNargs.args = NULL;
 
 	return funcArray;
 }

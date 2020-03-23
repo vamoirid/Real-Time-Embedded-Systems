@@ -27,7 +27,6 @@ typedef struct workFunArgs {
  */
 typedef struct workFunction {
 	void *(*work)(void *);
-	//void *args;
 	workFunArgs timeNargs;
 } workFunction;
 
