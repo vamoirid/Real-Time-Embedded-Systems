@@ -45,7 +45,7 @@ void *testFunction2(void *args)
 
 void *testFunction3(void *args)
 {
-	fprintf(stdout,"Quarantine Days!\n");
+	//fprintf(stdout,"Quarantine Days!\n");
 
 	return args;
 }

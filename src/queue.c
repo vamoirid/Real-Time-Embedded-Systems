@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <sys/time.h>
 #include "/home/vamoirid/Desktop/git/Real-Time-Embedded-Systems/inc/queue.h"
 
 /*

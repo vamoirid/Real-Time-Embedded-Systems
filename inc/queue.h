@@ -16,7 +16,7 @@
  *******************************************************************************
  */
 typedef struct workFunArgs {
-	void *args;
+	void *func_args;
 	struct timeval tv;
 } workFunArgs;
 
@@ -27,7 +27,7 @@ typedef struct workFunArgs {
  */
 typedef struct workFunction {
 	void *(*work)(void *);
-	workFunArgs timeNargs;
+	void *args;
 } workFunction;
 
 /*
