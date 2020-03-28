@@ -3,3 +3,4 @@ core
 *.o
 files.md
 *.txt
+readFile.c
