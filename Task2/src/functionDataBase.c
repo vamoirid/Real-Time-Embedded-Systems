@@ -8,42 +8,38 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include "/home/vamoirid/Desktop/Myrepos/Real-Time-Embedded-Systems/Task1/inc/functionDataBase.h"
+#include "../inc/functionDataBase.h"
 
-void *testFunction0(void *args)
+void *timerFcn0(void *args)
 {
 	double *sum = (double *)malloc(sizeof(double));
 	if(!sum) return NULL;
 	*sum = sin(*(double *)args * PI / 180.0);
-	free(args); // Allocated in producer.
 
 	return (sum);
 }
 
-void *testFunction1(void *args)
+void *timerFcn1(void *args)
 {
 	double *sum = (double *)malloc(sizeof(double));
 	if(!sum) return NULL;
 	*sum = cos(*(double *)args * PI / 180.0);
-	free(args); // Allocated in producer.
 
 	return (sum);
 }
 
-void *testFunction2(void *args)
+void *timerFcn2(void *args)
 {
 	double *sum = (double *)malloc(sizeof(double));
 	if(!sum) return NULL;
 	*sum = tan(*(double *)args * PI / 180.0);
-	free(args); // Allocated in producer.
 
 	return (sum);
 }
 
-void *testFunction3(void *args)
+void *timerFcn3(void *args)
 {
 	printf("Quarantine Days!\n");
-	free(args); // Allocated in producer.
 
 	return NULL;
 }

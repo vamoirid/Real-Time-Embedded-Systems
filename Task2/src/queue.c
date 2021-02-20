@@ -9,8 +9,9 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <inttypes.h>
 #include <sys/time.h>
-#include "/home/vamoirid/Desktop/Myrepos/Real-Time-Embedded-Systems/Task1/inc/queue.h"
+#include "../inc/queue.h"
 
 /*
  *******************************************************************************

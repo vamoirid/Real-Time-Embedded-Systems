@@ -11,17 +11,17 @@
 #include <pthread.h>
 #include <math.h>
 #include <sys/time.h>
-#include "/home/vamoirid/Desktop/git/Real-Time-Embedded-Systems/inc/queue.h"
-#include "/home/vamoirid/Desktop/git/Real-Time-Embedded-Systems/inc/functionDataBase.h"
+#include "/home/vamoirid/Desktop/Myrepos/Real-Time-Embedded-Systems/Task1/inc/queue.h"
+#include "/home/vamoirid/Desktop/Myrepos/Real-Time-Embedded-Systems/Task1/inc/functionDataBase.h"
 
 /*
  *******************************************************************************
  * DEFINES                                                                     *
  *******************************************************************************
  */
-#define NUM_PROD 1
+#define NUM_PROD 3
 #define NUM_CONS 6
-#define LOOP 10000
+#define LOOP 5
 
 /*
  *******************************************************************************
@@ -53,7 +53,6 @@ int *timeArrayIndex;
  */
 int main(int argc, char *argv[])
 {
-	
 	queue *fifo;
 	pthread_t prod[NUM_PROD], cons[NUM_CONS];
 	int i, times_sum = 0;
@@ -145,7 +144,7 @@ void *producer(void *args)
 		}
 
 		// Assign random values for function and corner
-		r = rand() % 4; //random int between [0,3]
+		r = 3;//rand() % 4; //random int between [0,3]
 		random_corner = (double *)malloc(sizeof(double));
 		*random_corner = rand() % 360;
 		// Allocate space and assign corner value
