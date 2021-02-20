@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include "/home/vamoirid/Desktop/Myrepos/Real-Time-Embedded-Systems/Task1/inc/functionDataBase.h"
+#include "../inc/functionDataBase.h"
 
 void *testFunction0(void *args)
 {

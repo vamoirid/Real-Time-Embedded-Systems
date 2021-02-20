@@ -11,8 +11,8 @@
 #include <pthread.h>
 #include <math.h>
 #include <sys/time.h>
-#include "/home/vamoirid/Desktop/Myrepos/Real-Time-Embedded-Systems/Task1/inc/queue.h"
-#include "/home/vamoirid/Desktop/Myrepos/Real-Time-Embedded-Systems/Task1/inc/functionDataBase.h"
+#include "../inc/queue.h"
+#include "../inc/functionDataBase.h"
 
 /*
  *******************************************************************************
